@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: letter; margin: 1in; }
+  body { font-family: 'Helvetica', sans-serif; font-size: 11pt; line-height: 1.4; }
+  h1 { font-size: 20pt; margin-bottom: 0; }
+  .section-title { font-size: 13pt; border-bottom: 1px solid #333; margin-top: 1.2em; }
+  .experience-item { margin-bottom: 0.8em; }
+  .job-title { font-weight: bold; }
+  .dates { float: right; color: #666; }
+  ul { margin-top: 0.2em; padding-left: 1.2em; }
+  .contact { font-size: 10pt; color: #555; }
+</style>
+</head>
+<body>
+  <h1>{{ resume.full_name }}</h1>
+  <p class="contact">{{ resume.email }}{% if resume.phone %} | {{ resume.phone }}{% endif %}</p>
+  {% if resume.summary %}<p>{{ resume.summary }}</p>{% endif %}
+
+  <div class="section-title">Experience</div>
+  {% for exp in resume.experience %}
+  <div class="experience-item">
+    <span class="job-title">{{ exp.title }}</span> – {{ exp.company }} <span class="dates">{{ exp.dates }}</span>
+    <ul>
+    {% for bullet in exp.bullets %}<li>{{ bullet }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+
+  <div class="section-title">Education</div>
+  {% for edu in resume.education %}
+  <p>{{ edu.degree }}, {{ edu.school }} ({{ edu.year }})</p>
+  {% endfor %}
+
+  <div class="section-title">Skills</div>
+  <p>{{ resume.skills | join(', ') if resume.skills else '' }}</p>
+
+  {% if resume.certifications %}
+  <div class="section-title">Certifications</div>
+  {% for cert in resume.certifications %}
+  <p>{{ cert.name }} ({{ cert.year }})</p>
+  {% endfor %}
+  {% endif %}
+</body>
+</html>

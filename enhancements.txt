@@ -1,0 +1,55 @@
+ Here are creative ways to expand JobTailor:
+
+  ---
+  New Pages
+
+  - Job Tracker Board — Kanban columns (Saved, Applied, Phone Screen, Onsite, Offer, Rejected). Drag cards between
+  stages. Each card stores the job description, tailored docs, notes, and deadlines.
+  - Analytics Dashboard — Application funnel chart, response rates by source (LinkedIn vs. Indeed vs. direct),
+  time-in-stage metrics, offer rate by role or company size.
+  - Interview Prep — Paste a job description, get AI-generated behavioral and technical questions. Mock answer recorder
+  with AI feedback on clarity and STAR format.
+  - Skills Gap Analyzer — Compares your resume's skills against skills extracted from 10+ job descriptions you've saved.
+   Shows a radar chart of what you have vs. what the market wants. Suggests certifications or projects to close gaps.
+  - Company CRM Lite — Save companies you're targeting. Track contacts, notes from calls, hiring manager LinkedIn
+  profiles, and company news pulled from RSS/API.
+  - Document Library — Store multiple resume versions (chronological, functional, tech-focused, management-focused).
+  One-click base resume switching before tailoring.
+  - Networking Tracker — Log coffee chats, referrals, and informational interviews. Reminders to follow up after N days
+  of silence.
+  - Salary Insights — Track offers you receive. Compare base, equity, and bonus across roles. Display trends over time
+  as a scatter plot.
+  - Email Composer — Generate cold outreach to recruiters, thank-you notes after interviews, and follow-up nudges, all
+  personalized from the job description and your resume.
+
+  Stats & Graphs
+
+  - Application Funnel (Sankey or funnel chart) — how many move from applied → screen → onsite → offer
+  - Keyword Match Score — gauge-style meter showing how well your resume maps to each job description before and after
+  tailoring
+  - Activity Heatmap — GitHub-contribution-graph style view of your applications and follow-ups per day
+  - Skills Demand Radar — spider chart comparing your skills against aggregated skills from jobs you've targeted
+  - Response Rate by Day of Week — bar chart revealing when applying yields the best callback rate
+  - Timeline View — horizontal Gantt-like timeline showing where each application sits and how long it's been stagnant
+  - Company Pipeline — stacked bar chart of companies grouped by stage (researching, contacted, interviewing, etc.)
+  - Top Keywords in Demand — word cloud or bar chart from all job descriptions you've pasted
+
+  AI Additions
+
+  - Resume A/B testing — generate two tailored variants for the same job, track which style gets more responses
+  - Job Description Summarizer — distill a 3-page JD into 5 bullet points: what they really want, red flags, culture
+  clues
+  - LinkedIn Profile Optimizer — reverse-engineer your resume into LinkedIn About and Experience sections with keyword
+  stuffing
+  - Negotiation Talking Points — input an offer letter, get data-driven counteroffer arguments based on market data for
+  the role and location
+  - Company Culture Decoder — scrape a company's careers page and Glassdoor reviews, summarize what they value and what
+  to emphasize in interviews
+
+  Smaller Quality-of-Life Upgrades
+
+  - Browser extension — one-click "Tailor my resume to this job" button on LinkedIn/Indeed/Glassdoor job pages
+  - PDF side-by-side diff — highlight what changed between your original resume and the tailored version
+  - Export to Notion/Google Docs — push generated cover letters and resumes directly to your workspace
+  - Job posting bookmarklet — save a job description to JobTailor directly from any job board with one click
+  - Share link — generate a time-limited link to share a tailored resume with a mentor for feedback
