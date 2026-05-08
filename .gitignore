@@ -27,6 +27,9 @@ dist/
 build/
 *.pyc
 *.db
+*.pdf
+*.png
+*.svg
 frontend/dist/
 
 
