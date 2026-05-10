@@ -1,18 +1,49 @@
 // JobSort browser extension — content script
 // Injects a floating "Adapt my resume to this job" button on job posting pages.
-// Handles scraping, button lifecycle, and user feedback.
 
 (function () {
   'use strict';
 
+  // Bail out if the extension was reloaded and this script is orphaned.
+  if (!chrome.runtime?.id) return;
+
   const BUTTON_ID = 'jobsort-adapt-btn';
+
+  // ── Mutable state ──────────────────────────────────────────────
+
   let currentJob = null;
   let buttonState = 'idle'; // idle | loading | success | error | already-saved
+  let initLock = false;
+  let contextInvalid = false;
+  let lastUrl = window.location.href;
+  let urlPoller = null;
+  let observer = null;
 
-  // ── Button creation ──────────────────────────────────────────
+  // ── Extension context guard ────────────────────────────────────
+
+  async function sendMessage(msg) {
+    if (contextInvalid) return null;
+    try {
+      return await chrome.runtime.sendMessage(msg);
+    } catch (err) {
+      if (err.message?.includes('Extension context invalidated')) {
+        shutdown();
+      }
+      throw err;
+    }
+  }
+
+  function shutdown() {
+    contextInvalid = true;
+    if (urlPoller) clearInterval(urlPoller);
+    if (observer) observer.disconnect();
+    const btn = document.getElementById(BUTTON_ID);
+    if (btn) btn.remove();
+  }
+
+  // ── Button creation ────────────────────────────────────────────
 
   function createButton() {
-    // Remove existing button if any
     const existing = document.getElementById(BUTTON_ID);
     if (existing) existing.remove();
 
@@ -28,7 +59,6 @@
     `;
     btn.title = 'Save this job to JobSort and adapt your resume';
 
-    // Inline styles for the button (isolated from page CSS)
     Object.assign(btn.style, {
       position: 'fixed',
       bottom: '24px',
@@ -72,7 +102,7 @@
     document.body.appendChild(btn);
   }
 
-  // ── Button state management ──────────────────────────────────
+  // ── Button state management ────────────────────────────────────
 
   function setButtonState(state, message) {
     buttonState = state;
@@ -95,7 +125,6 @@
         btn.style.opacity = '1';
         btn.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.35)';
         label.textContent = 'Saved to JobSort ✓';
-        // Reset after 3 seconds
         setTimeout(() => setButtonState('idle'), 3000);
         break;
 
@@ -126,16 +155,17 @@
     }
   }
 
-  // ── Click handler ────────────────────────────────────────────
+  // ── Click handler ──────────────────────────────────────────────
 
   async function handleClick() {
+    if (contextInvalid) return;
     if (buttonState === 'loading' || buttonState === 'success') return;
     if (!currentJob) return;
 
     setButtonState('loading');
 
     try {
-      const response = await chrome.runtime.sendMessage({
+      const response = await sendMessage({
         action: 'saveJob',
         data: {
           job_title: currentJob.job_title,
@@ -145,74 +175,87 @@
         },
       });
 
+      if (!response) return; // context invalidated during call
+
       if (response.success) {
         setButtonState('success');
       } else if (response.alreadySaved) {
         setButtonState('already-saved');
       } else {
         const msg = response.error || 'Failed — try again';
-      if (msg.includes('Not authenticated')) {
-        setButtonState('error', 'Sign in first — click the JobSort icon (🧩 in Chrome toolbar)');
-      } else {
-        setButtonState('error', msg);
+        if (msg.includes('Not authenticated')) {
+          setButtonState('error', 'Sign in first — click the JobSort icon (🧩 in Chrome toolbar)');
+        } else {
+          setButtonState('error', msg);
+        }
       }
+    } catch {
+      if (!contextInvalid) {
+        setButtonState('error', 'Extension error — reload the page');
       }
-    } catch (err) {
-      setButtonState('error', 'Extension error — reload the page');
     }
   }
 
-  // ── Scrape and initialize ────────────────────────────────────
+  // ── Scrape and initialize ──────────────────────────────────────
 
-  function init() {
-    currentJob = Scrapers.scrape();
-    if (!currentJob) return; // Not a job page we can parse
+  async function init() {
+    if (contextInvalid || initLock) return;
+    initLock = true;
 
-    // Check if already saved
-    chrome.runtime.sendMessage({ action: 'checkJob', url: window.location.href }, (response) => {
-      if (response && response.saved) {
-        currentJob = null; // Don't show button for already-saved jobs initially
-        // Still show the button so user can see it exists
-        createButton();
-        setButtonState('already-saved');
-      } else {
+    try {
+      if (typeof Scrapers === 'undefined') return;
+      currentJob = Scrapers.scrape();
+      if (!currentJob) return;
+
+      try {
+        const response = await sendMessage({
+          action: 'checkJob',
+          url: window.location.href,
+        });
+
+        if (!response) return; // context invalidated
+
+        if (response.saved) {
+          currentJob = null;
+          createButton();
+          setButtonState('already-saved');
+        } else {
+          createButton();
+          setButtonState('idle');
+        }
+      } catch {
+        if (contextInvalid) return;
         createButton();
         setButtonState('idle');
       }
-    });
+    } finally {
+      initLock = false;
+    }
   }
 
-  // ── SPA navigation handling ──────────────────────────────────
-
-  // LinkedIn and other SPAs change URL without page reload.
-  // We use a MutationObserver + URL polling to detect navigation.
-
-  let lastUrl = window.location.href;
+  // ── SPA navigation handling ────────────────────────────────────
 
   function checkUrlChange() {
+    if (contextInvalid) return;
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
-      // Remove old button
       const old = document.getElementById(BUTTON_ID);
       if (old) old.remove();
       buttonState = 'idle';
       currentJob = null;
-      // Wait for DOM to settle
       setTimeout(init, 1500);
     }
   }
 
-  // Poll for URL changes (robust across all SPAs)
-  setInterval(checkUrlChange, 1500);
+  urlPoller = setInterval(checkUrlChange, 1500);
 
-  // Also observe DOM for major changes (new content loaded)
-  const observer = new MutationObserver(() => {
+  observer = new MutationObserver(() => {
+    if (contextInvalid) return;
     if (!document.getElementById(BUTTON_ID) && document.readyState === 'complete') {
       init();
     }
   });
 
-  // Start observing once DOM is ready
   if (document.readyState === 'complete') {
     init();
   } else {

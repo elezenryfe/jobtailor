@@ -2,12 +2,40 @@ import json
 import logging
 from openai import OpenAI, APIError, RateLimitError
 from ..config import settings
-from .llm_utils import log_tokens
+from .llm_utils import log_tokens, clean_json_content
 
 logger = logging.getLogger(__name__)
 
 # Static lookup table: common tech skills → certs/courses/projects
 # Only calls LLM for skills NOT in this table
+# Mapping of surface forms to canonical skill names for matching.
+# Built from SKILL_SUGGESTIONS aliases + common tech abbreviations.
+_SKILL_ALIASES: dict = {}
+
+
+def _simple_normalize(s: str) -> str:
+    """Normalize without alias resolution: lowercase, strip symbols, collapse whitespace."""
+    import re
+    cleaned = s.lower().strip()
+    cleaned = re.sub(r"[.\-_]", " ", cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _normalize_skill(s: str) -> str:
+    """Normalize for comparison. Resolves aliases, then maps to a SKILL_SUGGESTIONS
+    key when possible so canonical forms are recognizable for suggestions lookup."""
+    norm = _simple_normalize(s)
+    # Resolve through alias map (chain: A→B→C until stable)
+    seen = {norm}
+    while norm in _SKILL_ALIASES:
+        norm = _SKILL_ALIASES[norm]
+        if norm in seen:
+            break
+        seen.add(norm)
+    # Map to best SKILL_SUGGESTIONS key if one exists
+    return _NORM_TO_SKILL_KEY.get(norm, norm)
+
+
 SKILL_SUGGESTIONS = {
     "aws": [
         {"category": "certification", "title": "AWS Certified Solutions Architect – Associate", "description": "The gold-standard AWS cert covering core services, architecture patterns, and cost optimization.", "url": "https://aws.amazon.com/certification/certified-solutions-architect-associate/"},
@@ -139,12 +167,98 @@ SKILL_SUGGESTIONS = {
 }
 
 
-def analyze_skills_gap(resume_skills, job_descriptions):
+# Reverse map: normalized form → best SKILL_SUGGESTIONS key
+_NORM_TO_SKILL_KEY: dict = {}
+for _key in SKILL_SUGGESTIONS:
+    _n = _simple_normalize(_key)
+    _existing = _NORM_TO_SKILL_KEY.get(_n)
+    if _existing is None or len(_key) > len(_existing):
+        _NORM_TO_SKILL_KEY[_n] = _key
+
+
+def _build_alias_map():
+    """Derives aliases from SKILL_SUGGESTIONS entries that point to the same target."""
+    from collections import defaultdict
+    by_target = defaultdict(list)
+    for skill, entries in SKILL_SUGGESTIONS.items():
+        key = tuple(sorted((e["title"], e.get("url", "")) for e in entries))
+        by_target[key].append(skill)
+    for names in by_target.values():
+        if len(names) > 1:
+            canonical = names[0]
+            for alias in names[1:]:
+                norm_alias = _simple_normalize(alias)
+                norm_canon = _simple_normalize(canonical)
+                # Link at the normalized level
+                if norm_alias != norm_canon:
+                    _SKILL_ALIASES[norm_alias] = norm_canon
+
+
+_build_alias_map()
+
+# Additional manual aliases (keys are simple-normalized forms, values are simple-normalized targets)
+_SKILL_ALIASES.update({
+    "k8s": "kubernetes",
+    "ec2": "aws",
+    "s3": "aws",
+    "lambda": "aws",
+    "gcp": "google cloud platform",
+    "google cloud": "gcp",
+    "azure": "microsoft azure",
+    "reactjs": "react",
+    "react js": "react",
+    "vuejs": "vue",
+    "vue js": "vue",
+    "nodejs": "node js",
+    "node": "node js",
+    "nextjs": "next js",
+    "next": "next js",
+    "nuxtjs": "nuxt",
+    "nuxt js": "nuxt",
+    "cpp": "c++",
+    "csharp": "c#",
+    "net": "c#",
+    "dotnet": "c#",
+    "asp net": "c#",
+    "golang": "go",
+    "ml": "machine learning",
+    "dl": "deep learning",
+    "nlp": "natural language processing",
+    "cv": "computer vision",
+    "ci": "ci/cd",
+    "cd": "ci/cd",
+    "cicd": "ci/cd",
+    "gha": "github actions",
+    "github actions": "ci/cd",
+    "ts": "typescript",
+    "js": "javascript",
+    "psql": "postgresql",
+    "postgres": "postgresql",
+    "mongo": "mongodb",
+    "tf": "terraform",
+    "elk": "elasticsearch",
+    "es": "elasticsearch",
+    "amazon web services": "aws",
+})
+
+# Flatten alias chains so every key resolves to its ultimate target in one hop
+for _key in list(_SKILL_ALIASES.keys()):
+    _seen = {_key}
+    _val = _SKILL_ALIASES[_key]
+    while _val in _SKILL_ALIASES:
+        if _val in _seen:
+            break
+        _seen.add(_val)
+        _val = _SKILL_ALIASES[_val]
+    _SKILL_ALIASES[_key] = _val
+
+
+def analyze_skills_gap(resume_skills, job_descriptions, db=None, user_id=None):
     """Compare resume skills against market demand from JDs."""
     from .keyword_extractor import extract_keywords
 
     try:
-        market_keywords = extract_keywords(job_descriptions)
+        market_keywords = extract_keywords(job_descriptions, db=db, user_id=user_id)
     except Exception:
         market_keywords = []
 
@@ -155,28 +269,52 @@ def analyze_skills_gap(resume_skills, job_descriptions):
             "totalDemandedSkills": 0,
         }
 
-    user_skills_lower = set(s.lower().strip() for s in resume_skills if s and s.strip())
-    market_skill_names = set()
+    # Build normalized user skill set with original→normalized mapping
+    user_skills_norm = {}
+    for s in resume_skills:
+        if s and s.strip():
+            orig = s.strip()
+            norm = _normalize_skill(orig)
+            user_skills_norm[norm] = orig
+
+    # Build normalized market skill set with normalized→original (display) mapping
+    market_skill_norms = {}
     market_freq = {}
     for item in market_keywords:
         word = item["word"].lower().strip()
+        norm = _normalize_skill(word)
         count = item["count"]
-        market_skill_names.add(word)
-        market_freq[word] = count
+        # Keep most specific original name as display when multiple map to same norm
+        existing = market_skill_norms.get(norm)
+        if existing is None or len(word) > len(existing):
+            market_skill_norms[norm] = word
+        market_freq[norm] = market_freq.get(norm, 0) + count
 
-    matching = sorted(s for s in user_skills_lower if s in market_skill_names)
-    missing = sorted(s for s in market_skill_names if s not in user_skills_lower)
-    extra = sorted(s for s in user_skills_lower if s not in market_skill_names)
+    user_norm_set = set(user_skills_norm.keys())
+    market_norm_set = set(market_skill_norms.keys())
 
-    total_demanded = len(market_skill_names)
-    match_score = round((len(matching) / total_demanded) * 100, 1) if total_demanded > 0 else 0
+    matching_norms = user_norm_set & market_norm_set
+    missing_norms = market_norm_set - user_norm_set
+    extra_norms = user_norm_set - market_norm_set
+
+    # Return original display names
+    matching = sorted(market_skill_norms[n] for n in matching_norms)
+    missing = sorted(market_skill_norms[n] for n in missing_norms)
+    extra = sorted(user_skills_norm[n] for n in extra_norms)
+
+    total_demanded = len(market_norm_set)
+    match_score = round((len(matching_norms) / total_demanded) * 100, 1) if total_demanded > 0 else 0
 
     all_relevant = sorted(
-        [s for s in set(matching + missing)],
-        key=lambda s: market_freq.get(s, 0), reverse=True,
+        [market_skill_norms[n] for n in (matching_norms | missing_norms)],
+        key=lambda s: market_freq.get(_normalize_skill(s), 0), reverse=True,
     )[:12]
 
-    radar_data = [{"skill": s, "demandCount": market_freq.get(s, 0), "hasIt": s in user_skills_lower} for s in all_relevant]
+    radar_data = [
+        {"skill": s, "demandCount": market_freq.get(_normalize_skill(s), 0),
+         "hasIt": _normalize_skill(s) in user_norm_set}
+        for s in all_relevant
+    ]
 
     return {
         "matching": matching, "missing": missing, "extra": extra,
@@ -186,7 +324,26 @@ def analyze_skills_gap(resume_skills, job_descriptions):
     }
 
 
-def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=None):
+def _normalize_suggestion(item: dict, skill_name_fallback: str = "") -> dict:
+    """Normalize LLM output field names to match GapSuggestion schema."""
+    normalized = {}
+    # Map skill_name → skill
+    if "skill" in item:
+        normalized["skill"] = item["skill"]
+    elif "skill_name" in item:
+        normalized["skill"] = item["skill_name"]
+    elif skill_name_fallback:
+        normalized["skill"] = skill_name_fallback
+    else:
+        return None  # can't normalize without a skill name
+    # Copy known fields, drop unknowns
+    for field in ("category", "title", "description"):
+        normalized[field] = item.get(field, "")
+    normalized["url"] = item.get("url") or None
+    return normalized
+
+
+def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=None, db=None, user_id=None):
     """AI call for gap suggestions. Uses static lookup first, LLM only for unknowns."""
     if not missing_skills:
         return []
@@ -196,8 +353,13 @@ def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=Non
 
     for skill in missing_skills:
         skill_lower = skill.lower().strip()
-        if skill_lower in SKILL_SUGGESTIONS:
-            for s in SKILL_SUGGESTIONS[skill_lower]:
+        entry = SKILL_SUGGESTIONS.get(skill_lower)
+        if entry is None:
+            entry = SKILL_SUGGESTIONS.get(_normalize_skill(skill))
+        if entry is None:
+            entry = SKILL_SUGGESTIONS.get(_simple_normalize(skill))
+        if entry:
+            for s in entry:
                 suggestions.append({"skill": skill, **s})
         else:
             unknown.append(skill)
@@ -207,9 +369,11 @@ def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=Non
         return suggestions
 
     system_prompt = (
-        "Suggest practical ways to learn these skills. For each: skill name, "
-        'category ("certification"|"course"|"project"), title, description (1-2 sentences), '
-        "url (optional). Return ONLY a JSON array."
+        "Suggest practical ways to learn skills. For each skill, recommend a certification, "
+        "course, or project. Output ONLY a valid JSON array — no markdown, no code fences, "
+        "no text before or after. The first character must be [ and the last must be ].\n"
+        "Format: [{\"skill\": \"skill_name\", \"category\": \"certification|course|project\", "
+        "\"title\": \"...\", \"description\": \"1-2 sentences\", \"url\": \"optional URL or null\"}]"
     )
 
     user_message = (
@@ -231,11 +395,14 @@ def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=Non
                 format="json",
                 options={"temperature": 0.5},
             )
-            log_tokens(response, "gap_suggestions")
+            log_tokens(response, "gap_suggestions", db=db, user_id=user_id, model="llama3.1:8b")
             content = response["message"]["content"]
-            result = json.loads(content)
-            if isinstance(result, list):
-                suggestions.extend(result)
+            result = clean_json_content(content)
+            items = result if isinstance(result, list) else []
+            for item in items:
+                norm = _normalize_suggestion(item)
+                if norm:
+                    suggestions.append(norm)
         except Exception as e:
             logger.warning(f"Ollama gap suggestions failed: {e}")
     else:
@@ -243,24 +410,43 @@ def generate_gap_suggestions(resume_skills, missing_skills, job_descriptions=Non
         try:
             logger.info("Calling DeepSeek for gap suggestions...")
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.5,
-                max_tokens=1500,
+                max_tokens=4000,
+                extra_body={"thinking": {"type": "disabled"}},
             )
-            log_tokens(response, "gap_suggestions")
+            log_tokens(response, "gap_suggestions", db=db, user_id=user_id, model="deepseek-v4-flash")
             content = response.choices[0].message.content
-            parsed = json.loads(content)
+            finish = response.choices[0].finish_reason
+            if not content:
+                if finish == 'length':
+                    logger.warning("DeepSeek gap suggestions hit max_tokens, content empty")
+                else:
+                    logger.warning("DeepSeek gap suggestions content empty, finish_reason=%s", finish)
+                return suggestions
+            parsed = clean_json_content(content)
+            items = []
             if isinstance(parsed, list):
-                suggestions.extend(parsed)
+                items = parsed
             elif isinstance(parsed, dict):
-                for v in parsed.values():
-                    if isinstance(v, list):
-                        suggestions.extend(v)
+                # Try common wrapper keys first
+                for key in ("suggestions", "results", "data"):
+                    if key in parsed and isinstance(parsed[key], list):
+                        items = parsed[key]
+                        break
+                if not items:
+                    for v in parsed.values():
+                        if isinstance(v, list):
+                            items = v
+                            break
+            for item in items:
+                norm = _normalize_suggestion(item)
+                if norm:
+                    suggestions.append(norm)
         except (RateLimitError, APIError, json.JSONDecodeError, Exception) as e:
             logger.warning(f"DeepSeek gap suggestions failed: {e}")
 

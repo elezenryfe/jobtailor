@@ -47,7 +47,7 @@ def analyze(
         raise HTTPException(400, "No job descriptions found. Add jobs with descriptions on the Job Board first.")
 
     try:
-        return analyze_skills_gap(skills, job_descriptions)
+        return analyze_skills_gap(skills, job_descriptions, db=db, user_id=current_user.id)
     except Exception as e:
         logger.error(f"Skills gap analysis failed: {e}")
         raise HTTPException(500, "Failed to analyze skills gap.")
@@ -85,13 +85,13 @@ def suggestions(
     if not skills or not job_descriptions:
         return {"suggestions": []}
 
-    analysis = analyze_skills_gap(skills, job_descriptions)
+    analysis = analyze_skills_gap(skills, job_descriptions, db=db, user_id=current_user.id)
     missing = analysis.get("missing", [])[:5]
     if not missing:
         return {"suggestions": []}
 
     try:
-        result = generate_gap_suggestions(skills, missing, job_descriptions)
+        result = generate_gap_suggestions(skills, missing, job_descriptions, db=db, user_id=current_user.id)
     except Exception as e:
         logger.error(f"Gap suggestions failed: {e}")
         return {"suggestions": []}

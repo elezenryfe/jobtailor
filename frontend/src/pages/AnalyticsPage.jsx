@@ -18,247 +18,35 @@ const getErrorMessage = (err, fallback = 'Something went wrong') => {
 
 const STAGE_COLORS = {
   Saved: '#9ca3af',
-  Applied: '#3b82f6',
-  'Phone Screen': '#f59e0b',
-  Onsite: '#8b5cf6',
+  Applied: '#0a72ef',
+  'Phone Screen': '#de1d8d',
+  Onsite: '#7928ca',
   Offer: '#10b981',
-  Rejected: '#ef4444',
+  Rejected: '#ff5b4f',
 };
 
-const funnelSection = (data, dark) => (
-  <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-    <SectionHeader
-      accent="blue"
-      icon={
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      }
-      title="Application Funnel"
-      description="Number of jobs at each stage."
-    />
-    {data.length === 0 ? (
-      <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">No data yet</p>
-    ) : (
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} layout="vertical" margin={{ left: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
-          <XAxis type="number" tick={{ fontSize: 11, fill: dark ? '#9ca3af' : '#6b7280' }} allowDecimals={false} />
-          <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fill: dark ? '#9ca3af' : '#6b7280' }} width={90} />
-          <Tooltip
-            contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-          />
-          <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-            {data.map((entry, idx) => (
-              <Cell key={idx} fill={STAGE_COLORS[entry.stage] || '#3b82f6'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    )}
-  </div>
-);
-
-const responseRateSection = (data, dark) => {
-  const total = data.reduce((sum, d) => sum + d.count, 0);
-  const appliedCount = data.filter((d) => d.stage !== 'Saved').reduce((sum, d) => sum + d.count, 0);
-  const savedCount = data.find((d) => d.stage === 'Saved')?.count || 0;
-  const rate = total > 0 ? Math.round((appliedCount / total) * 100) : 0;
-
-  const pieData = [
-    { name: 'In Progress', value: appliedCount || 0 },
-    { name: 'Saved', value: savedCount || 0 },
-  ].filter((d) => d.value > 0);
-
-  return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-      <SectionHeader
-        accent="green"
-        icon={
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
-          </svg>
-        }
-        title="Response Rate"
-        description="Jobs that moved past 'Saved' stage."
-      />
-      {pieData.length === 0 ? (
-        <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">No data yet</p>
-      ) : (
-        <div className="flex flex-col items-center">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                <Cell fill="#10b981" />
-                <Cell fill="#9ca3af" />
-              </Pie>
-              <Tooltip
-                contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{rate}%</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">applications progressed</p>
-        </div>
-      )}
-    </div>
-  );
+const statsIcons = {
+  total: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+  active: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+  offers: 'M5 13l4 4L19 7',
+  rejected: 'M6 18L18 6M6 6l12 12',
 };
 
-const timelineSection = (data, dark, groupBy, setGroupBy) => (
-  <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-    <div className="flex items-center justify-between mb-2">
-      <SectionHeader
-        accent="indigo"
-        icon={
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        }
-        title="Applications Over Time"
-        description="When you started applying."
-      />
-      <div className="flex gap-1">
-        {['week', 'month'].map((g) => (
-          <button
-            key={g}
-            onClick={() => setGroupBy(g)}
-            className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
-              groupBy === g
-                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
-          >
-            {g === 'week' ? 'By Week' : 'By Month'}
-          </button>
-        ))}
-      </div>
-    </div>
-    {data.length === 0 ? (
-      <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">No data yet — start applying to jobs</p>
-    ) : (
-      <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={data} margin={{ left: 5, right: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
-          <XAxis dataKey="period" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
-          <YAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} allowDecimals={false} />
-          <Tooltip
-            contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-          />
-          <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} />
-        </LineChart>
-      </ResponsiveContainer>
-    )}
+const tooltipStyle = (dark) => ({
+  fontSize: 12,
+  backgroundColor: dark ? '#1a1a1a' : '#ffffff',
+  border: 'none',
+  borderRadius: 8,
+  color: dark ? '#fafafa' : '#171717',
+  boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.12)',
+});
+
+const Section = ({ accent, icon, title, description, children }) => (
+  <div className="card p-5">
+    <SectionHeader accent={accent} icon={icon} title={title} description={description} />
+    {children}
   </div>
 );
-
-const keywordsSection = (data, dark) => (
-  <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-    <SectionHeader
-      accent="purple"
-      icon={
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-      }
-      title="Top Keywords"
-      description="Most frequent terms in job descriptions."
-    />
-    {data.length === 0 ? (
-      <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">Add job descriptions to see keyword trends</p>
-    ) : (
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ left: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
-          <XAxis type="number" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} allowDecimals={false} />
-          <YAxis type="category" dataKey="word" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} width={80} />
-          <Tooltip
-            contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-          />
-          <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    )}
-  </div>
-);
-
-const timeInStageSection = (data, dark) => (
-  <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-    <SectionHeader
-      accent="green"
-      icon={
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      }
-      title="Average Time in Stage"
-      description="Days since job was created, grouped by current stage."
-    />
-    {data.length === 0 ? (
-      <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">No data yet</p>
-    ) : (
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
-          <XAxis type="number" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
-          <YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} width={90} />
-          <Tooltip
-            contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-            formatter={(val) => [`${val} days`, 'Avg Time']}
-          />
-          <Bar dataKey="avg_days" radius={[0, 4, 4, 0]}>
-            {data.map((entry, idx) => (
-              <Cell key={idx} fill={STAGE_COLORS[entry.stage] || '#10b981'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    )}
-  </div>
-);
-
-const companyPipelineSection = (data, dark) => {
-  // Flatten company pipeline data for stacked bar chart
-  const stages = ['Saved', 'Applied', 'Phone Screen', 'Onsite', 'Offer', 'Rejected'];
-  const chartData = data.map((item) => {
-    const row = { company: item.company };
-    stages.forEach((s) => { row[s] = item.stages[s] || 0; });
-    return row;
-  });
-
-  return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-      <SectionHeader
-        accent="blue"
-        icon={
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-        }
-        title="Company Pipeline"
-        description="Breakdown by company and stage."
-      />
-      {chartData.length === 0 ? (
-        <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">No data yet</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} margin={{ left: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#374151' : '#e5e7eb'} />
-            <XAxis dataKey="company" tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
-            <YAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} allowDecimals={false} />
-            <Tooltip
-              contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
-            />
-            <Legend wrapperStyle={{ fontSize: 10 }} />
-            {stages.map((s) => (
-              <Bar key={s} dataKey={s} stackId="a" fill={STAGE_COLORS[s]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      )}
-    </div>
-  );
-};
 
 export default function AnalyticsPage() {
   const { dark } = useTheme();
@@ -301,61 +89,224 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-6 space-y-6 max-w-5xl mx-auto w-full">
-        <div className="h-6 w-36 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="p-5 lg:p-8 space-y-6 max-w-5xl mx-auto w-full">
+        <div className="h-7 w-28 bg-[var(--accents-2)] rounded animate-pulse mb-5" />
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 h-20 animate-pulse" />
+            <div key={i} className="card h-20 animate-pulse" />
           ))}
         </div>
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 h-80 animate-pulse" />
+        <div className="card h-80 animate-pulse" />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="p-4 lg:p-6 max-w-5xl mx-auto w-full">
-        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+      <div className="p-5 lg:p-8 max-w-5xl mx-auto w-full">
+        <div className="rounded-lg p-3 text-xs" style={{ background: 'rgba(255,91,79,0.08)', color: '#ff5b4f' }}>
           {error}
         </div>
       </div>
     );
   }
 
+  const funnelData = data.funnel;
+  const totalForRate = funnelData.reduce((sum, d) => sum + d.count, 0);
+  const appliedCount = funnelData.filter((d) => d.stage !== 'Saved').reduce((sum, d) => sum + d.count, 0);
+  const savedCount = funnelData.find((d) => d.stage === 'Saved')?.count || 0;
+  const rate = totalForRate > 0 ? Math.round((appliedCount / totalForRate) * 100) : 0;
+  const pieData = [
+    { name: 'In Progress', value: appliedCount || 0 },
+    { name: 'Saved', value: savedCount || 0 },
+  ].filter((d) => d.value > 0);
+
+  // Flatten company pipeline for stacked bar
+  const stages = ['Saved', 'Applied', 'Phone Screen', 'Onsite', 'Offer', 'Rejected'];
+  const companyChartData = (data.companyPipeline || []).map((item) => {
+    const row = { company: item.company };
+    stages.forEach((s) => { row[s] = item.stages[s] || 0; });
+    return row;
+  });
+
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-5xl mx-auto w-full">
-      <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Analytics</h1>
+    <div className="p-5 lg:p-8 space-y-6 max-w-5xl mx-auto w-full">
+      <h1 className="text-xl font-semibold text-[var(--geist-foreground)] tracking-[-0.025em]">Analytics</h1>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <StatsCard label="Total Jobs" value={computedStats.total} icon="💼" accent="blue" />
-        <StatsCard label="Active" value={computedStats.active} icon="🔄" accent="indigo" />
-        <StatsCard label="Offers" value={computedStats.offers} icon="🎉" accent="green" />
-        <StatsCard label="Rejected" value={computedStats.rejected} icon="❌" accent="purple" />
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatsCard label="Total Jobs" value={computedStats.total} icon={statsIcons.total} accent="success" />
+        <StatsCard label="Active" value={computedStats.active} icon={statsIcons.active} accent="success" />
+        <StatsCard label="Offers" value={computedStats.offers} icon={statsIcons.offers} accent="success" />
+        <StatsCard label="Rejected" value={computedStats.rejected} icon={statsIcons.rejected} accent="error" />
       </div>
 
       {/* Funnel + Response Rate row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2">
-          {funnelSection(data.funnel, dark)}
+          <Section
+            accent="success"
+            icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+            title="Application Funnel"
+            description="Number of jobs at each stage."
+          >
+            {funnelData.length === 0 ? (
+              <p className="text-xs text-[var(--accents-3)] py-8 text-center">No data yet</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={funnelData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#333' : '#eaeaea'} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: dark ? '#888' : '#666' }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fill: dark ? '#888' : '#666' }} width={90} />
+                  <Tooltip contentStyle={tooltipStyle(dark)} />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    {funnelData.map((entry, idx) => (
+                      <Cell key={idx} fill={STAGE_COLORS[entry.stage] || '#0a72ef'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Section>
         </div>
         <div>
-          {responseRateSection(data.funnel, dark)}
+          <Section
+            accent="success"
+            icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" /></svg>}
+            title="Response Rate"
+            description="Jobs that moved past 'Saved' stage."
+          >
+            {pieData.length === 0 ? (
+              <p className="text-xs text-[var(--accents-3)] py-8 text-center">No data yet</p>
+            ) : (
+              <div className="flex flex-col items-center">
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
+                      <Cell fill="#10b981" />
+                      <Cell fill="#9ca3af" />
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle(dark)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <p className="text-2xl font-bold text-[var(--geist-foreground)]">{rate}%</p>
+                <p className="text-xs text-[var(--accents-4)]">applications progressed</p>
+              </div>
+            )}
+          </Section>
         </div>
       </div>
 
       {/* Timeline */}
-      {timelineSection(data.timeline, dark, timelineGroup, setTimelineGroup)}
+      <Section
+        accent="neutral"
+        icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+        title="Applications Over Time"
+        description="When you started applying."
+      >
+        <div className="flex gap-1 mb-3">
+          {['week', 'month'].map((g) => (
+            <button
+              key={g}
+              onClick={() => setTimelineGroup(g)}
+              className={`text-xs font-medium px-3 py-1 rounded-md transition-colors ${
+                timelineGroup === g
+                  ? 'bg-[var(--geist-foreground)] text-[var(--geist-background)]'
+                  : 'btn-ghost'
+              }`}
+            >
+              {g === 'week' ? 'By Week' : 'By Month'}
+            </button>
+          ))}
+        </div>
+        {(!data.timeline || data.timeline.length === 0) ? (
+          <p className="text-xs text-[var(--accents-3)] py-8 text-center">No data yet — start applying to jobs</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={data.timeline} margin={{ left: 5, right: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#333' : '#eaeaea'} />
+              <XAxis dataKey="period" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} />
+              <YAxis tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle(dark)} />
+              <Line type="monotone" dataKey="count" stroke="#0a72ef" strokeWidth={2} dot={{ r: 3, fill: '#0a72ef' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </Section>
 
       {/* Keywords + Time in Stage row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {keywordsSection(data.keywords, dark)}
-        {timeInStageSection(data.timeInStage, dark)}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Section
+          accent="warning"
+          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>}
+          title="Top Keywords"
+          description="Most frequent terms in job descriptions."
+        >
+          {!data.keywords || data.keywords.length === 0 ? (
+            <p className="text-xs text-[var(--accents-3)] py-8 text-center">Add job descriptions to see keyword trends</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={data.keywords.slice(0, 10)} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#333' : '#eaeaea'} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} allowDecimals={false} />
+                <YAxis type="category" dataKey="word" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} width={80} />
+                <Tooltip contentStyle={tooltipStyle(dark)} />
+                <Bar dataKey="count" fill="#de1d8d" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Section>
+
+        <Section
+          accent="success"
+          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          title="Average Time in Stage"
+          description="Days since job was created, grouped by current stage."
+        >
+          {!data.timeInStage || data.timeInStage.length === 0 ? (
+            <p className="text-xs text-[var(--accents-3)] py-8 text-center">No data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data.timeInStage} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#333' : '#eaeaea'} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} />
+                <YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} width={90} />
+                <Tooltip contentStyle={tooltipStyle(dark)} formatter={(val) => [`${val} days`, 'Avg Time']} />
+                <Bar dataKey="avg_days" radius={[0, 4, 4, 0]}>
+                  {data.timeInStage.map((entry, idx) => (
+                    <Cell key={idx} fill={STAGE_COLORS[entry.stage] || '#10b981'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Section>
       </div>
 
       {/* Company Pipeline */}
-      {companyPipelineSection(data.companyPipeline, dark)}
+      <Section
+        accent="success"
+        icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+        title="Company Pipeline"
+        description="Breakdown by company and stage."
+      >
+        {companyChartData.length === 0 ? (
+          <p className="text-xs text-[var(--accents-3)] py-8 text-center">No data yet</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={companyChartData} margin={{ left: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#333' : '#eaeaea'} />
+              <XAxis dataKey="company" tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} />
+              <YAxis tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} allowDecimals={false} />
+              <Tooltip contentStyle={tooltipStyle(dark)} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {stages.map((s) => (
+                <Bar key={s} dataKey={s} stackId="a" fill={STAGE_COLORS[s]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Section>
     </div>
   );
 }

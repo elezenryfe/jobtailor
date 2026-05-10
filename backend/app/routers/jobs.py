@@ -14,6 +14,18 @@ def create_job(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db),
 ):
+    # Duplicate detection by URL
+    if req.job_url and req.job_url.strip():
+        existing = db.query(models.Job).filter(
+            models.Job.user_id == current_user.id,
+            models.Job.job_url == req.job_url.strip(),
+        ).first()
+        if existing:
+            raise HTTPException(
+                409,
+                f"This job is already on your board in the '{existing.stage}' column.",
+            )
+
     job = models.Job(
         user_id=current_user.id,
         job_title=req.job_title,

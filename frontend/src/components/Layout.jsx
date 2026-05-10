@@ -7,11 +7,11 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-[var(--accents-1)] dark:bg-[#0a0a0a]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -22,7 +22,7 @@ export default function Layout() {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
+        <main className="flex-1 overflow-y-auto bg-[var(--accents-1)] dark:bg-[#0a0a0a]">
           <Outlet />
         </main>
       </div>

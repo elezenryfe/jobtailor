@@ -14,3 +14,5 @@ email-validator==2.2.0
 ollama>=0.3.0
 google-auth==2.27.0
 requests==2.31.0
+pytest==8.3.0
+responses==0.25.0

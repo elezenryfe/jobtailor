@@ -38,6 +38,7 @@ class TailoredDocument(Base):
     job_description = Column(Text)
     job_title = Column(String, nullable=True)
     company = Column(String, nullable=True)
+    mode = Column(String, nullable=True, default="both")  # "both" | "resume" | "cover_letter"
     tailored_resume_json = Column(JSON)
     cover_letter_text = Column(Text)
     resume_pdf_path = Column(String)
@@ -74,3 +75,15 @@ class InterviewPrep(Base):
     created_at = Column(DateTime, server_default=func.now())
     user = relationship("User")
     job = relationship("Job")
+
+class LLMCallLog(Base):
+    __tablename__ = "llm_call_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    call_name = Column(String, nullable=False)       # e.g. "resume_parse", "tailor_resume"
+    model = Column(String, nullable=False)             # e.g. "deepseek-v4-flash", "llama3.1:8b"
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    user = relationship("User")

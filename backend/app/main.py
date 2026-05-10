@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import auth, resume, tailor, jobs, analytics, gap_analyzer, interview
+from .routers import auth, resume, tailor, jobs, analytics, gap_analyzer, interview, job_search
 from .config import settings
 
 # Configure logging
@@ -41,6 +41,7 @@ app.include_router(jobs.router)
 app.include_router(analytics.router)
 app.include_router(gap_analyzer.router)
 app.include_router(interview.router)
+app.include_router(job_search.router)
 
 @app.get("/")
 def root():

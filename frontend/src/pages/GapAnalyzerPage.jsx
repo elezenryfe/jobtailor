@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import SectionHeader from '../components/SectionHeader';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
+
+const STORAGE_KEY = 'gap_analyzer_state';
 
 const getErrorMessage = (err, fallback = 'Something went wrong') => {
   const detail = err?.response?.data?.detail;
@@ -12,15 +14,41 @@ const getErrorMessage = (err, fallback = 'Something went wrong') => {
   return fallback;
 };
 
+const suggestionCategoryColors = {
+  certification: { bg: 'rgba(222,29,141,0.08)', text: '#de1d8d' },
+  course: { bg: 'rgba(10,114,239,0.08)', text: '#0a72ef' },
+  project: { bg: 'rgba(121,40,202,0.08)', text: '#7928ca' },
+};
+
+function loadPersistedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore corrupt data */ }
+  return null;
+}
+
+function persistState(state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* ignore quota errors */ }
+}
+
 export default function GapAnalyzerPage() {
   const { dark } = useTheme();
+  const persisted = loadPersistedState();
   const [resumes, setResumes] = useState([]);
-  const [selectedResumeId, setSelectedResumeId] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
+  const [selectedResumeId, setSelectedResumeId] = useState(persisted?.selectedResumeId || '');
+  const [analysis, setAnalysis] = useState(persisted?.analysis || null);
+  const [suggestions, setSuggestions] = useState(persisted?.suggestions || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resumesLoaded, setResumesLoaded] = useState(false);
+
+  // Auto-load resumes on mount
+  useEffect(() => {
+    loadResumes();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadResumes = async () => {
     if (resumesLoaded) return;
@@ -37,14 +65,21 @@ export default function GapAnalyzerPage() {
 
   const handleAnalyze = async () => {
     if (!selectedResumeId) { setError('Select a resume first.'); return; }
-    setLoading(true); setError(''); setAnalysis(null); setSuggestions([]);
+    setLoading(true); setError('');
     try {
       const [analysisRes, sugRes] = await Promise.all([
         api.get('/api/gap-analyzer/analyze', { params: { resume_id: selectedResumeId } }),
         api.get('/api/gap-analyzer/suggestions', { params: { resume_id: selectedResumeId } }),
       ]);
-      setAnalysis(analysisRes.data);
-      setSuggestions(sugRes.data.suggestions || []);
+      const newAnalysis = analysisRes.data;
+      const newSuggestions = sugRes.data.suggestions || [];
+      setAnalysis(newAnalysis);
+      setSuggestions(newSuggestions);
+      persistState({
+        selectedResumeId,
+        analysis: newAnalysis,
+        suggestions: newSuggestions,
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to analyze skills gap'));
     } finally {
@@ -60,20 +95,14 @@ export default function GapAnalyzerPage() {
       }))
     : [];
 
-  const suggestionCategoryColors = {
-    certification: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-    course: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-    project: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-  };
-
   return (
-    <div className="p-4 lg:p-6 space-y-6 max-w-5xl mx-auto w-full">
-      <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Skills Gap Analyzer</h1>
+    <div className="p-5 lg:p-8 space-y-6 max-w-5xl mx-auto w-full">
+      <h1 className="text-xl font-semibold text-[var(--geist-foreground)] tracking-[-0.025em]">Skills Gap Analyzer</h1>
 
       {/* Input Card */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+      <div className="card p-5">
         <SectionHeader
-          accent="indigo"
+          accent="success"
           icon={
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
@@ -84,12 +113,12 @@ export default function GapAnalyzerPage() {
         />
         <div className="flex flex-wrap items-end gap-3 mt-1">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Select Resume</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Select Resume</label>
             <select
               value={selectedResumeId}
               onFocus={handleFocus}
               onChange={(e) => setSelectedResumeId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              className="select-geist"
             >
               <option value="">Select a resume...</option>
               {resumes.map((r) => (
@@ -100,14 +129,14 @@ export default function GapAnalyzerPage() {
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors h-[38px]"
+            className="btn-primary"
           >
             {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-xs text-red-700 dark:text-red-400 mt-3">
+          <div className="rounded-lg p-3 text-xs mt-3" style={{ background: 'rgba(255,91,79,0.08)', color: '#ff5b4f' }}>
             {error}
           </div>
         )}
@@ -115,33 +144,36 @@ export default function GapAnalyzerPage() {
 
       {/* Loading */}
       {loading && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 h-64 animate-pulse" />
+        <div className="card h-64 animate-pulse" />
       )}
 
       {/* Results */}
       {analysis && !loading && (
         <>
           {/* Match Score + Radar */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Match Score Card */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 flex flex-col items-center justify-center">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Match Score</p>
-              <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">{analysis.matchScore}%</p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-3 mb-2">
+            <div className="card p-5 flex flex-col items-center justify-center">
+              <p className="text-xs font-medium text-[var(--accents-4)] mb-2">Match Score</p>
+              <p className="text-5xl font-bold text-[var(--geist-foreground)] tracking-[-0.04em]">{analysis.matchScore}%</p>
+              <div className="w-full bg-[var(--accents-2)] rounded-full h-1.5 mt-4 mb-2">
                 <div
-                  className="h-2 rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
-                  style={{ width: `${Math.min(analysis.matchScore, 100)}%` }}
+                  className="h-1.5 rounded-full"
+                  style={{
+                    width: `${Math.min(analysis.matchScore, 100)}%`,
+                    background: `linear-gradient(90deg, #ff5b4f, #de1d8d, #0a72ef)`,
+                  }}
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[var(--accents-4)]">
                 {analysis.matching.length} of {analysis.totalDemandedSkills} market skills matched
               </p>
             </div>
 
             {/* Radar Chart */}
-            <div className="lg:col-span-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+            <div className="lg:col-span-2 card p-5">
               <SectionHeader
-                accent="purple"
+                accent="neutral"
                 icon={
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -151,17 +183,24 @@ export default function GapAnalyzerPage() {
                 description="Market demand vs. your skills."
               />
               {chartData.length === 0 ? (
-                <p className="text-xs text-gray-400 dark:text-gray-600 py-8 text-center">Not enough skill data to chart</p>
+                <p className="text-xs text-[var(--accents-3)] py-8 text-center">Not enough skill data to chart</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <RadarChart data={chartData}>
-                    <PolarGrid stroke={dark ? '#374151' : '#e5e7eb'} />
-                    <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11, fill: dark ? '#9ca3af' : '#6b7280' }} />
-                    <PolarRadiusAxis tick={{ fontSize: 10, fill: dark ? '#9ca3af' : '#6b7280' }} />
-                    <Radar name="Market Demand" dataKey="demand" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} />
+                    <PolarGrid stroke={dark ? '#333' : '#eaeaea'} />
+                    <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11, fill: dark ? '#888' : '#666' }} />
+                    <PolarRadiusAxis tick={{ fontSize: 10, fill: dark ? '#888' : '#666' }} />
+                    <Radar name="Market Demand" dataKey="demand" stroke="#de1d8d" fill="#de1d8d" fillOpacity={0.15} />
                     <Radar name="Your Skills" dataKey="you" stroke="#10b981" fill="#10b981" fillOpacity={0.35} strokeDasharray="4 4" />
                     <Tooltip
-                      contentStyle={{ fontSize: 12, backgroundColor: dark ? '#1f2937' : '#fff', border: dark ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: 8, color: dark ? '#f3f4f6' : '#111827' }}
+                      contentStyle={{
+                        fontSize: 12,
+                        backgroundColor: dark ? '#1a1a1a' : '#ffffff',
+                        border: 'none',
+                        borderRadius: 8,
+                        color: dark ? '#fafafa' : '#171717',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.12)',
+                      }}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -172,16 +211,16 @@ export default function GapAnalyzerPage() {
           {/* Skill Lists */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Matching */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-              <h3 className="text-xs font-semibold text-green-600 dark:text-green-400 mb-2">
+            <div className="card p-5">
+              <h3 className="text-xs font-semibold tracking-[-0.01em] mb-2" style={{ color: '#10b981' }}>
                 Matching ({analysis.matching.length})
               </h3>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {analysis.matching.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-600">None</p>
+                  <p className="text-xs text-[var(--accents-3)]">None</p>
                 ) : (
                   analysis.matching.map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
+                    <span key={s} className="badge text-[11px]" style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981' }}>
                       {s}
                     </span>
                   ))
@@ -190,16 +229,16 @@ export default function GapAnalyzerPage() {
             </div>
 
             {/* Missing */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-              <h3 className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2">
+            <div className="card p-5">
+              <h3 className="text-xs font-semibold tracking-[-0.01em] mb-2" style={{ color: '#ff5b4f' }}>
                 Missing ({analysis.missing.length})
               </h3>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {analysis.missing.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-600">None — great job!</p>
+                  <p className="text-xs text-[var(--accents-3)]">None — great job!</p>
                 ) : (
                   analysis.missing.map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                    <span key={s} className="badge text-[11px]" style={{ background: 'rgba(255,91,79,0.08)', color: '#ff5b4f' }}>
                       {s}
                     </span>
                   ))
@@ -208,16 +247,16 @@ export default function GapAnalyzerPage() {
             </div>
 
             {/* Extra */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+            <div className="card p-5">
+              <h3 className="text-xs font-semibold text-[var(--accents-5)] tracking-[-0.01em] mb-2">
                 Extra ({analysis.extra.length})
               </h3>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {analysis.extra.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-600">None</p>
+                  <p className="text-xs text-[var(--accents-3)]">None</p>
                 ) : (
                   analysis.extra.map((s) => (
-                    <span key={s} className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    <span key={s} className="badge" style={{ background: 'rgba(0,0,0,0.04)', color: '#666666' }}>
                       {s}
                     </span>
                   ))
@@ -228,9 +267,9 @@ export default function GapAnalyzerPage() {
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+            <div className="card p-5">
               <SectionHeader
-                accent="green"
+                accent="success"
                 icon={
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -240,34 +279,37 @@ export default function GapAnalyzerPage() {
                 description="Certifications, courses, and projects for your top missing skills."
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
-                {suggestions.map((s, i) => (
-                  <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${suggestionCategoryColors[s.category] || ''}`}>
-                        {s.category}
-                      </span>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">{s.title}</span>
+                {suggestions.map((s, i) => {
+                  const catColor = suggestionCategoryColors[s.category] || suggestionCategoryColors.course;
+                  return (
+                    <div key={i} className="rounded-lg p-3" style={{ background: 'var(--accents-1)', boxShadow: '0 0 0 1px rgba(0,0,0,0.05)' }}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="badge text-[10px]" style={{ backgroundColor: catColor.bg, color: catColor.text, padding: '2px 6px' }}>
+                          {s.category}
+                        </span>
+                        <span className="text-xs font-semibold text-[var(--geist-foreground)]">{s.title}</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--accents-5)] leading-relaxed">{s.description}</p>
+                      {s.url && (
+                        <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-block mt-1.5 text-[11px] text-[var(--geist-success)] hover:underline">
+                          Learn more →
+                        </a>
+                      )}
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{s.description}</p>
-                    {s.url && (
-                      <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-block mt-1.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline">
-                        Learn more →
-                      </a>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* Empty state (no analysis yet) */}
+      {/* Empty state */}
       {!analysis && !loading && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-10 text-center">
-          <p className="text-4xl mb-3">🎯</p>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Find your skill gaps</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="card p-10 text-center">
+          <p className="text-4xl mb-4 opacity-30">+</p>
+          <h3 className="text-sm font-semibold text-[var(--geist-foreground)] tracking-[-0.015em] mb-1">Find your skill gaps</h3>
+          <p className="text-xs text-[var(--accents-4)]">
             Select a resume and click Analyze to see how you stack up against the market.
           </p>
         </div>

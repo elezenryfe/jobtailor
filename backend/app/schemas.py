@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -11,6 +11,7 @@ class GoogleAuthRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    is_new_user: bool = False
 
 class UserOut(BaseModel):
     id: int
@@ -18,6 +19,10 @@ class UserOut(BaseModel):
     name: Optional[str] = None
     class Config:
         from_attributes = True
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
 
 class ResumeUploadOut(BaseModel):
     id: int
@@ -81,6 +86,50 @@ class JobOut(BaseModel):
     updated_at: datetime
     class Config:
         from_attributes = True
+
+# ----- Job Search Schemas -----
+
+class EmploymentType(str, Enum):
+    FULLTIME = "FULLTIME"
+    PARTTIME = "PARTTIME"
+    CONTRACT = "CONTRACT"
+    INTERN = "INTERN"
+    TEMPORARY = "TEMPORARY"
+
+
+class JobSearchParams(BaseModel):
+    keywords: str = Field(..., min_length=1)
+    location: Optional[str] = None
+    employment_types: Optional[List[EmploymentType]] = None
+    remote_only: bool = False
+    page: int = 1
+    num_pages: int = 1
+
+
+class JobSearchResult(BaseModel):
+    source_job_id: str
+    job_title: str
+    company: str
+    location: Optional[str] = None
+    job_description: str
+    job_description_html: Optional[str] = None
+    min_salary: Optional[float] = None
+    max_salary: Optional[float] = None
+    salary_currency: Optional[str] = None
+    salary_period: Optional[str] = None
+    employment_type: Optional[str] = None
+    job_url: Optional[str] = None
+    posted_at: Optional[str] = None
+    publisher: Optional[str] = None
+    required_skills: List[str] = []
+
+
+class JobSearchResponse(BaseModel):
+    results: List[JobSearchResult]
+    total: int
+    page: int
+    num_pages: int
+
 
 # ----- Analytics Schemas -----
 

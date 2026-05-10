@@ -11,24 +11,48 @@ logger = logging.getLogger(__name__)
 
 # ── Token logging ─────────────────────────────────────────────
 
-def log_tokens(response, call_name: str):
-    """Log token usage from an OpenAI-compatible or Ollama response."""
+def log_tokens(response, call_name: str, db=None, user_id=None, model: str = ""):
+    """Log token usage from an OpenAI-compatible or Ollama response.
+    When db and user_id are provided, persists to the LLMCallLog table."""
+    prompt_tokens = None
+    completion_tokens = None
+    total_tokens = None
+
     try:
         if hasattr(response, 'usage') and response.usage:
+            prompt_tokens = response.usage.prompt_tokens
+            completion_tokens = response.usage.completion_tokens
+            total_tokens = response.usage.total_tokens
             logger.info(
-                f"[TOKENS] {call_name} | prompt={response.usage.prompt_tokens} "
-                f"completion={response.usage.completion_tokens} "
-                f"total={response.usage.total_tokens}"
+                f"[TOKENS] {call_name} | prompt={prompt_tokens} "
+                f"completion={completion_tokens} total={total_tokens}"
             )
         elif isinstance(response, dict) and "message" in response:
             # Ollama response: {message: {content: ...}}
             content = response.get("message", {}).get("content", "")
-            estimated = max(1, int(len(content.split()) * 1.3))
-            logger.info(f"[TOKENS] {call_name} | estimated_total={estimated} (Ollama)")
+            total_tokens = max(1, int(len(content.split()) * 1.3))
+            logger.info(f"[TOKENS] {call_name} | estimated_total={total_tokens} (Ollama)")
         else:
             logger.info(f"[TOKENS] {call_name} | usage data unavailable")
     except Exception:
         logger.debug(f"[TOKENS] {call_name} | failed to log tokens")
+
+    # Persist to DB when db session and user_id are available
+    if db is not None and user_id is not None:
+        try:
+            from ..models import LLMCallLog
+            log_entry = LLMCallLog(
+                user_id=user_id,
+                call_name=call_name,
+                model=model or "unknown",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception:
+            logger.debug(f"[TOKENS] {call_name} | failed to persist log", exc_info=True)
 
 
 # ── JD boilerplate stripping ──────────────────────────────────
@@ -78,6 +102,58 @@ def strip_jd_boilerplate(jd_text: str, max_chars: int = 3000) -> str:
 
 
 # ── Dedup helpers ─────────────────────────────────────────────
+
+def clean_json_content(content: str):
+    """Strip markdown fences and extract JSON from LLM response text.
+
+    Returns the parsed JSON object (list or dict), or raises json.JSONDecodeError.
+    """
+    import json
+
+    if not content:
+        raise json.JSONDecodeError("Empty content", "", 0)
+
+    text = content.strip()
+
+    # Strip markdown code fences: ```json ... ``` or ``` ... ```
+    if text.startswith("```"):
+        text = text[3:]  # strip opening ```
+        if text.lower().startswith("json"):
+            text = text[4:]
+        text = text.strip()
+        # Remove closing ```
+        if text.endswith("```"):
+            text = text[:-3].strip()
+
+    # Find first occurrence of [ or {
+    for i, ch in enumerate(text):
+        if ch in ("[", "{"):
+            text = text[i:]
+            break
+    else:
+        raise json.JSONDecodeError("No JSON start found", text, 0)
+
+    # Find last matching ] or }
+    stack = []
+    end = -1
+    for i, ch in enumerate(text):
+        if ch in ("[", "{"):
+            stack.append(ch)
+        elif ch in ("]", "}"):
+            if not stack:
+                break
+            opener = stack.pop()
+            if (opener == "[" and ch != "]") or (opener == "{" and ch != "}"):
+                break
+            if not stack:
+                end = i
+                break
+
+    if end > 0:
+        text = text[: end + 1]
+
+    return json.loads(text)
+
 
 def hash_text(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()

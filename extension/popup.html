@@ -20,14 +20,12 @@
     .logo-icon {
       width: 32px;
       height: 32px;
-      background: #2563eb;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 700;
-      font-size: 16px;
+    }
+    .logo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
     .logo-text { font-size: 16px; font-weight: 600; }
     .status {
@@ -105,7 +103,7 @@
 <body>
   <div class="container">
     <div class="logo">
-      <div class="logo-icon">J</div>
+      <div class="logo-icon"><img src="icons/icon48.png" alt="JobSort" /></div>
       <span class="logo-text">JobSort</span>
     </div>
 
@@ -154,7 +152,7 @@
         Open JobSort Dashboard
       </button>
       <button class="btn btn-danger" id="logout-btn">Sign Out</button>
-      <p class="hint">Browse LinkedIn, Indeed, or Glassdoor — a button will appear on job pages.</p>
+      <p class="hint">Browse LinkedIn, Indeed, Glassdoor, Monster, ZipRecruiter, Dice, SimplyHired, Wellfound, or CareerBuilder — a button will appear on job pages.</p>
     </div>
   </div>
 

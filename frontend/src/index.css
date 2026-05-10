@@ -1,13 +1,334 @@
 @import "tailwindcss";
 @variant dark (&:is(.dark *));
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #fafafa;
-  color: #171717;
+@layer base {
+  :root {
+    /* Core */
+    --geist-foreground: #171717;
+    --geist-background: #ffffff;
+
+    /* Gray scale */
+    --accents-1: #fafafa;
+    --accents-2: #eaeaea;
+    --accents-3: #999999;
+    --accents-4: #888888;
+    --accents-5: #666666;
+    --accents-6: #444444;
+    --accents-7: #333333;
+    --accents-8: #111111;
+
+    /* Semantic accents */
+    --geist-success: #0a72ef;
+    --geist-warning: #de1d8d;
+    --geist-error: #ff5b4f;
+
+    /* Typography */
+    --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
+
+    /* Radii */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    /* Shadows — shadow-as-border technique */
+    --shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.08);
+    --shadow-border-hover: 0 0 0 1px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.02), 0 4px 8px rgba(0, 0, 0, 0.02), 0 8px 16px rgba(0, 0, 0, 0.02), 0 16px 32px rgba(0, 0, 0, 0.02);
+    --shadow-xl: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.08), 0 32px 64px rgba(0, 0, 0, 0.08);
+
+    /* Focus */
+    --focus-ring: hsla(212, 100%, 48%, 1);
+  }
+
+  .dark {
+    --geist-foreground: #ededed;
+    --geist-background: #000000;
+
+    --accents-1: #111111;
+    --accents-2: #333333;
+    --accents-3: #444444;
+    --accents-4: #666666;
+    --accents-5: #888888;
+    --accents-6: #999999;
+    --accents-7: #eaeaea;
+    --accents-8: #fafafa;
+
+    --shadow-border: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --shadow-border-hover: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--geist-background);
+    color: var(--geist-foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+  }
 }
 
-html.dark body {
-  background-color: #0a0a0a;
-  color: #f5f5f5;
+@layer utilities {
+  /* Shadow-as-border card */
+  .card {
+    background: var(--geist-background);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-border);
+  }
+
+  .card-hover {
+    background: var(--geist-background);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-border);
+    transition: box-shadow 200ms ease;
+  }
+  .card-hover:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevated {
+    background: var(--geist-background);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Input — shadow-as-border */
+  .input-geist {
+    background: var(--geist-background);
+    color: var(--geist-foreground);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    padding: 0 12px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: none;
+    box-shadow: var(--shadow-border);
+    transition: box-shadow 150ms ease;
+    width: 100%;
+    outline: none;
+  }
+  .input-geist:hover {
+    box-shadow: var(--shadow-border-hover);
+  }
+  .input-geist:focus {
+    box-shadow: 0 0 0 1px var(--geist-foreground);
+  }
+  .input-geist::placeholder {
+    color: var(--accents-3);
+  }
+  .input-geist:disabled {
+    background: var(--accents-1);
+    color: var(--accents-3);
+    cursor: not-allowed;
+  }
+
+  /* Textarea variant */
+  .textarea-geist {
+    background: var(--geist-background);
+    color: var(--geist-foreground);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: none;
+    box-shadow: var(--shadow-border);
+    transition: box-shadow 150ms ease;
+    width: 100%;
+    outline: none;
+    resize: vertical;
+  }
+  .textarea-geist:hover {
+    box-shadow: var(--shadow-border-hover);
+  }
+  .textarea-geist:focus {
+    box-shadow: 0 0 0 1px var(--geist-foreground);
+  }
+  .textarea-geist::placeholder {
+    color: var(--accents-3);
+  }
+
+  /* Select variant */
+  .select-geist {
+    background: var(--geist-background);
+    color: var(--geist-foreground);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    padding: 0 12px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: none;
+    box-shadow: var(--shadow-border);
+    transition: box-shadow 150ms ease;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+  }
+  .select-geist:hover {
+    box-shadow: var(--shadow-border-hover);
+  }
+  .select-geist:focus {
+    box-shadow: 0 0 0 1px var(--geist-foreground);
+  }
+
+  /* Primary button */
+  .btn-primary {
+    background: var(--geist-foreground);
+    color: var(--geist-background);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 12px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: var(--accents-7);
+  }
+  .btn-primary:active {
+    background: var(--accents-6);
+    transform: scale(0.98);
+  }
+  .btn-primary:disabled {
+    background: var(--accents-1);
+    color: var(--accents-3);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .dark .btn-primary {
+    background: var(--accents-7);
+    color: #000000;
+  }
+  .dark .btn-primary:hover {
+    background: var(--accents-8);
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    background: var(--geist-background);
+    color: var(--geist-foreground);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 12px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: none;
+    box-shadow: var(--shadow-border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .btn-secondary:hover {
+    background: var(--accents-1);
+    box-shadow: var(--shadow-border-hover);
+  }
+  .btn-secondary:active {
+    background: var(--accents-2);
+  }
+  .btn-secondary:disabled {
+    color: var(--accents-3);
+    cursor: not-allowed;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    background: var(--geist-error);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 12px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .btn-danger:hover {
+    opacity: 0.9;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    background: transparent;
+    color: var(--accents-5);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 8px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover {
+    background: var(--accents-1);
+    color: var(--geist-foreground);
+  }
+
+  /* Button sizes */
+  .btn-sm {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+  .btn-lg {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 15px;
+  }
+
+  /* Pill badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Heading tracking */
+  .h-title {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+  .h-section {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+  }
+  .h-card {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+  }
 }

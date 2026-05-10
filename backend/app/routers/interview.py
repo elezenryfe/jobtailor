@@ -55,7 +55,7 @@ def generate_questions(
             return prep
 
     try:
-        questions = interview_coach.generate_questions(job_desc, job_title, company, count=count)
+        questions = interview_coach.generate_questions(job_desc, job_title, company, count=count, db=db, user_id=current_user.id)
     except RuntimeError as e:
         raise HTTPException(500, detail=str(e))
 
@@ -81,7 +81,7 @@ def evaluate_answer(
     db: Session = Depends(database.get_db),
 ):
     try:
-        result = interview_coach.evaluate_answer(req.question, req.answer, req.context)
+        result = interview_coach.evaluate_answer(req.question, req.answer, req.context, db=db, user_id=current_user.id)
     except RuntimeError as e:
         raise HTTPException(500, detail=str(e))
     return result

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
 
 const STAGES = ['Saved', 'Applied', 'Phone Screen', 'Onsite', 'Offer', 'Rejected'];
 
@@ -62,68 +61,68 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
     }
   };
 
-  const inputClass =
-    'w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none';
-
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center pt-[10vh] px-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 shadow-xl">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative rounded-xl bg-[var(--geist-background)] w-full max-w-lg max-h-[80vh] overflow-y-auto p-6"
+        style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.12)' }}
+      >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="absolute top-4 right-4 p-1 rounded-md text-[var(--accents-4)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)] transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h3 className="text-lg font-semibold text-[var(--geist-foreground)] tracking-[-0.02em] mb-5">
           {job ? 'Edit Job' : 'Add Job'}
         </h3>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Job Title *</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Job Title *</label>
             <input
               type="text"
               value={form.job_title}
               onChange={(e) => handleChange('job_title', e.target.value)}
               placeholder="Software Engineer"
-              className={inputClass}
+              className="input-geist"
             />
-            {errors.job_title && <p className="text-[11px] text-red-500 mt-0.5">{errors.job_title}</p>}
+            {errors.job_title && <p className="text-[11px] text-[var(--geist-error)] mt-0.5">{errors.job_title}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Company *</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Company *</label>
             <input
               type="text"
               value={form.company}
               onChange={(e) => handleChange('company', e.target.value)}
               placeholder="Acme Corp"
-              className={inputClass}
+              className="input-geist"
             />
-            {errors.company && <p className="text-[11px] text-red-500 mt-0.5">{errors.company}</p>}
+            {errors.company && <p className="text-[11px] text-[var(--geist-error)] mt-0.5">{errors.company}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Job URL</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Job URL</label>
             <input
               type="url"
               value={form.job_url}
               onChange={(e) => handleChange('job_url', e.target.value)}
               placeholder="https://..."
-              className={inputClass}
+              className="input-geist"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Stage</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Stage</label>
             <select
               value={form.stage}
               onChange={(e) => handleChange('stage', e.target.value)}
-              className={inputClass}
+              className="select-geist"
             >
               {STAGES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -132,11 +131,11 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Linked Resume</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Linked Resume</label>
             <select
               value={form.resume_id}
               onChange={(e) => handleChange('resume_id', e.target.value)}
-              className={inputClass}
+              className="select-geist"
             >
               <option value="">None</option>
               {resumes.map((r) => (
@@ -146,38 +145,38 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Job Description</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Job Description</label>
             <textarea
               rows={4}
               value={form.job_description}
               onChange={(e) => handleChange('job_description', e.target.value)}
               placeholder="Paste the job description..."
-              className={`${inputClass} resize-none`}
+              className="textarea-geist"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+            <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Notes</label>
             <textarea
               rows={2}
               value={form.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
               placeholder="Any notes..."
-              className={`${inputClass} resize-none`}
+              className="textarea-geist"
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-3">
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="btn-primary flex-1"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="btn-secondary"
             >
               Cancel
             </button>

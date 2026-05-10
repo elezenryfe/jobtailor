@@ -69,7 +69,7 @@ def keywords(
     descriptions = [j.job_description for j in jobs if j.job_description]
     if not descriptions:
         return []
-    result = extract_keywords(descriptions)
+    result = extract_keywords(descriptions, db=db, user_id=current_user.id)
     return result
 
 

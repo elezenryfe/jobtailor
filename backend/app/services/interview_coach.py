@@ -58,7 +58,7 @@ def _extract_requirements(jd_text: str) -> str:
     return strip_jd_boilerplate(jd_text, 800)
 
 
-def generate_questions(job_description, job_title="", company="", count=3):
+def generate_questions(job_description, job_title="", company="", count=3, db=None, user_id=None):
     """Generate interview questions. Behavioral from static bank, technical+role from LLM."""
     clean_jd = strip_jd_boilerplate(job_description)
     reqs = _extract_requirements(clean_jd)
@@ -92,7 +92,7 @@ def generate_questions(job_description, job_title="", company="", count=3):
                 format="json",
                 options={"temperature": 0.7},
             )
-            log_tokens(response, "interview_questions")
+            log_tokens(response, "interview_questions", db=db, user_id=user_id, model="llama3.1:8b")
             result = json.loads(response["message"]["content"])
         except Exception as e:
             logger.error(f"Ollama question generation failed: {e}")
@@ -102,7 +102,7 @@ def generate_questions(job_description, job_title="", company="", count=3):
         try:
             logger.info("Calling DeepSeek for interview questions...")
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
@@ -110,8 +110,9 @@ def generate_questions(job_description, job_title="", company="", count=3):
                 response_format={"type": "json_object"},
                 temperature=0.7,
                 max_tokens=2000,
+                extra_body={"thinking": {"type": "disabled"}},
             )
-            log_tokens(response, "interview_questions")
+            log_tokens(response, "interview_questions", db=db, user_id=user_id, model="deepseek-v4-flash")
             result = json.loads(response.choices[0].message.content)
         except RateLimitError as e:
             logger.error(f"DeepSeek rate limit: {e}")
@@ -137,7 +138,7 @@ def generate_questions(job_description, job_title="", company="", count=3):
     return result
 
 
-def evaluate_answer(question, answer, context=""):
+def evaluate_answer(question, answer, context="", db=None, user_id=None):
     """Evaluate a practice answer. Context should be minimal (role title + company)."""
 
     system_prompt = (
@@ -162,7 +163,7 @@ def evaluate_answer(question, answer, context=""):
                 format="json",
                 options={"temperature": 0.3},
             )
-            log_tokens(response, "answer_eval")
+            log_tokens(response, "answer_eval", db=db, user_id=user_id, model="llama3.1:8b")
             return json.loads(response["message"]["content"])
         except Exception as e:
             logger.error(f"Ollama evaluation failed: {e}")
@@ -172,7 +173,7 @@ def evaluate_answer(question, answer, context=""):
         try:
             logger.info("Calling DeepSeek for answer evaluation...")
             response = client.chat.completions.create(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
@@ -180,8 +181,9 @@ def evaluate_answer(question, answer, context=""):
                 response_format={"type": "json_object"},
                 temperature=0.3,
                 max_tokens=600,
+                extra_body={"thinking": {"type": "disabled"}},
             )
-            log_tokens(response, "answer_eval")
+            log_tokens(response, "answer_eval", db=db, user_id=user_id, model="deepseek-v4-flash")
             return json.loads(response.choices[0].message.content)
         except RateLimitError as e:
             logger.error(f"DeepSeek rate limit: {e}")

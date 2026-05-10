@@ -86,7 +86,6 @@ export default function BoardPage() {
     const jobId = parseInt(active.id);
     const newStage = over.id;
 
-    // Optimistic update
     const prev = [...jobs];
     setJobs((current) =>
       current.map((j) => (j.id === jobId ? { ...j, stage: newStage } : j))
@@ -113,13 +112,13 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-6 max-w-full mx-auto w-full">
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+      <div className="p-5 lg:p-8 max-w-full mx-auto w-full">
+        <div className="flex items-center justify-between mb-5">
+          <div className="h-7 w-28 bg-[var(--accents-2)] rounded animate-pulse" />
         </div>
         <div className="flex gap-3 overflow-x-auto pb-4">
           {STAGES.map((s) => (
-            <div key={s} className="w-72 shrink-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 h-64 animate-pulse" />
+            <div key={s} className="w-72 shrink-0 rounded-lg bg-[var(--accents-1)] h-64 animate-pulse" style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.06)' }} />
           ))}
         </div>
       </div>
@@ -127,13 +126,13 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-full mx-auto w-full">
+    <div className="p-5 lg:p-8 max-w-full mx-auto w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Job Board</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-xl font-semibold text-[var(--geist-foreground)] tracking-[-0.025em]">Job Board</h1>
         <button
           onClick={() => { setEditingJob(null); setModalOpen(true); }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+          className="btn-primary"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -143,22 +142,22 @@ export default function BoardPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-xs text-red-700 dark:text-red-400 mb-4">
+        <div className="rounded-lg p-3 text-xs mb-4" style={{ background: 'rgba(255,91,79,0.08)', color: '#ff5b4f' }}>
           {error}
         </div>
       )}
 
       {/* Empty state */}
       {jobs.length === 0 && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-10 text-center">
-          <p className="text-4xl mb-3">📋</p>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">No jobs yet</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        <div className="card p-10 text-center">
+          <p className="text-4xl mb-4 opacity-50">+</p>
+          <h3 className="text-sm font-semibold text-[var(--geist-foreground)] tracking-[-0.015em] mb-1">No jobs yet</h3>
+          <p className="text-xs text-[var(--accents-4)] mb-5">
             Add your first job to start tracking applications.
           </p>
           <button
             onClick={() => { setEditingJob(null); setModalOpen(true); }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+            className="btn-primary"
           >
             Add Your First Job
           </button>
@@ -170,7 +169,7 @@ export default function BoardPage() {
         <select
           value={mobileStage}
           onChange={(e) => setMobileStage(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 mb-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+          className="select-geist mb-4"
         >
           {STAGES.map((s) => {
             const count = getJobsForStage(s).length;

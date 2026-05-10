@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import jobsortLight from '../assets/jobsort_light.png';
+import jobsortDark from '../assets/jobsort_dark.png';
 
 const navItems = [
   {
@@ -13,6 +15,11 @@ const navItems = [
     label: 'Job Board',
     icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
     to: '/board',
+  },
+  {
+    label: 'Job Search',
+    icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+    to: '/job-search',
   },
   {
     label: 'Analytics',
@@ -44,14 +51,14 @@ export default function Sidebar({ open, setOpen }) {
 
   return (
     <>
-      {/* Mobile toggle button (hamburger) – always visible on small screens */}
+      {/* Mobile toggle */}
       <button
-        className="fixed top-4 left-4 z-30 rounded-md bg-gray-900 p-2 text-white lg:hidden"
+        className="fixed top-4 left-4 z-30 rounded-md bg-[var(--geist-foreground)] p-2 text-[var(--geist-background)] lg:hidden"
         onClick={() => setOpen(!open)}
       >
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
-            strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d={open ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
           />
         </svg>
@@ -59,34 +66,36 @@ export default function Sidebar({ open, setOpen }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-20 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
+        className={`fixed inset-y-0 left-0 z-20 flex flex-col bg-[var(--geist-background)] dark:bg-black
+          shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]
           transform transition-all duration-200 ease-in-out
           lg:translate-x-0 lg:static lg:inset-auto
           ${open ? 'translate-x-0' : '-translate-x-full'}
           ${collapsed ? 'w-16' : 'w-60'}`}
       >
-        {/* Logo area (top) – collapse button is now HERE, right‑aligned */}
+        {/* Logo */}
         <div
-          className={`flex h-14 items-center border-b border-gray-200 dark:border-gray-800 px-4 ${
+          className={`flex h-14 items-center px-4 ${
             collapsed ? 'justify-center' : 'justify-between'
           }`}
+          style={{ boxShadow: '0 1px 0 0 rgba(0,0,0,0.06)' }}
         >
-          {/* Left: logo + name */}
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-600 text-xs font-bold text-white">
-              J
-            </div>
+            <img
+              src={dark ? jobsortDark : jobsortLight}
+              alt="JobSort"
+              className={collapsed ? 'h-7 w-7 object-cover' : 'h-7'}
+            />
             {!collapsed && (
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                JobSort
+              <span className="text-base font-bold text-[var(--geist-foreground)] tracking-wide">
+                JOBSORT
               </span>
             )}
           </div>
 
-          {/* Collapse toggle button – always visible */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="rounded-md p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="rounded-md p-1.5 text-[var(--accents-4)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)] transition-colors"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg
@@ -101,8 +110,8 @@ export default function Sidebar({ open, setOpen }) {
                 strokeWidth={1.5}
                 d={
                   collapsed
-                    ? 'M13 5l7 7-7 7M5 5l7 7-7 7' // double arrow right (expand)
-                    : 'M11 19l-7-7 7-7m8 14l-7-7 7-7' // double arrow left (collapse)
+                    ? 'M13 5l7 7-7 7M5 5l7 7-7 7'
+                    : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'
                 }
               />
             </svg>
@@ -110,7 +119,7 @@ export default function Sidebar({ open, setOpen }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.label}
@@ -119,8 +128,8 @@ export default function Sidebar({ open, setOpen }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-[var(--accents-1)] text-[var(--geist-foreground)]'
+                    : 'text-[var(--accents-5)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)]'
                 } ${collapsed ? 'justify-center px-0' : ''}`
               }
               title={collapsed ? item.label : undefined}
@@ -134,11 +143,11 @@ export default function Sidebar({ open, setOpen }) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="border-t border-gray-200 dark:border-gray-800 p-2 space-y-1">
+        <div className="p-2 space-y-0.5" style={{ boxShadow: '0 -1px 0 0 rgba(0,0,0,0.06)' }}>
           {/* Theme toggle */}
           <button
             onClick={toggle}
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[var(--accents-5)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)] transition-colors ${
               collapsed ? 'justify-center px-0' : ''
             }`}
             title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -155,20 +164,38 @@ export default function Sidebar({ open, setOpen }) {
             {!collapsed && <span>{dark ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
 
-          {/* User info (hidden when collapsed) */}
+          {/* User info */}
           {!collapsed && (
             <div className="flex items-center gap-3 px-3 py-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accents-1)] text-xs font-medium text-[var(--accents-5)]">
                 {user?.email?.charAt(0).toUpperCase()}
               </div>
-              <span className="flex-1 truncate text-xs text-gray-500 dark:text-gray-400">{user?.name}</span>
+              <span className="flex-1 truncate text-xs text-[var(--accents-4)]">{user?.name}</span>
             </div>
           )}
+
+          {/* Profile link */}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-[var(--accents-1)] text-[var(--geist-foreground)]'
+                  : 'text-[var(--accents-5)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)]'
+              } ${collapsed ? 'justify-center px-0' : ''}`
+            }
+            title={collapsed ? 'Profile' : undefined}
+          >
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            {!collapsed && <span>Profile</span>}
+          </NavLink>
 
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[var(--accents-5)] hover:bg-[var(--accents-1)] hover:text-[var(--geist-foreground)] transition-colors ${
               collapsed ? 'justify-center px-0' : ''
             }`}
             title="Logout"

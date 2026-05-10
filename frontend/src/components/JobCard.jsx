@@ -18,24 +18,23 @@ export default function JobCard({ job, onClick, onDelete, onTailor }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`rounded-lg border bg-white dark:bg-gray-900 p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-sm ${
+      className={`rounded-md bg-[var(--geist-background)] p-3 cursor-grab active:cursor-grabbing transition-shadow select-none ${
         isDragging
-          ? 'opacity-50 shadow-lg border-blue-400 dark:border-blue-500'
-          : 'border-gray-200 dark:border-gray-800'
+          ? 'opacity-50 shadow-[0_0_0_1px_rgba(10,114,239,0.4),0_8px_24px_rgba(0,0,0,0.12)]'
+          : 'shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_4px_12px_rgba(0,0,0,0.06)]'
       } ${job.stage === 'Rejected' ? 'opacity-60' : ''}`}
       onClick={(e) => {
-        // Don't open detail if clicking action buttons
         if (e.target.closest('button')) return;
         onClick();
       }}
     >
       <div className="flex items-start justify-between gap-1">
-        <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
+        <p className="text-xs font-semibold text-[var(--geist-foreground)] tracking-[-0.01em] truncate">
           {job.company}
         </p>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="shrink-0 p-0.5 rounded text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="shrink-0 p-1 rounded text-[var(--accents-4)] hover:text-[var(--geist-error)] hover:bg-[rgba(255,91,79,0.08)] transition-colors"
           title="Delete job"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -44,17 +43,18 @@ export default function JobCard({ job, onClick, onDelete, onTailor }) {
         </button>
       </div>
 
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+      <p className="text-[11px] text-[var(--accents-4)] mt-0.5 truncate">
         {job.job_title}
       </p>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">{daysLabel}</span>
+      <div className="flex items-center justify-between mt-2.5">
+        <span className="text-[10px] text-[var(--accents-3)]">{daysLabel}</span>
         <button
           onClick={(e) => { e.stopPropagation(); onTailor(); }}
-          className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+          className="text-[10px] font-medium px-2 py-0.5 rounded-md transition-colors"
+          style={{ background: 'rgba(10,114,239,0.08)', color: '#0a72ef' }}
         >
-          Adapt Resume
+          Adapt
         </button>
       </div>
     </div>

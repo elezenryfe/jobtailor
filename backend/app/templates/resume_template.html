@@ -12,11 +12,13 @@
   .dates { float: right; color: #666; }
   ul { margin-top: 0.2em; padding-left: 1.2em; }
   .contact { font-size: 10pt; color: #555; }
+  .other-content { white-space: pre-line; }
+
 </style>
 </head>
 <body>
   <h1>{{ resume.full_name }}</h1>
-  <p class="contact">{{ resume.email }}{% if resume.phone %} | {{ resume.phone }}{% endif %}</p>
+  {% if resume.email %}<p class="contact">{{ resume.email }}</p>{% endif %}
   {% if resume.summary %}<p>{{ resume.summary }}</p>{% endif %}
 
   <div class="section-title">Experience</div>
@@ -43,5 +45,10 @@
   <p>{{ cert.name }} ({{ cert.year }})</p>
   {% endfor %}
   {% endif %}
+
+  {% for section in resume.other %}
+  <div class="section-title">{{ section.heading }}</div>
+  <p class="other-content">{{ section.content }}</p>
+  {% endfor %}
 </body>
 </html>

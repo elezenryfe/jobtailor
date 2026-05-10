@@ -42,9 +42,9 @@ async def upload_resume(
     if not check_rate_limit(current_user.id):
         raise HTTPException(429, "Too many requests. Please wait a moment.")
 
-    # Structure with AI
+    # Structure with AI (PII redacted, injected from profile)
     try:
-        structured = structure_resume_with_ai(raw_text)
+        structured = structure_resume_with_ai(raw_text, db=db, user_id=current_user.id, profile_name=current_user.name, profile_email=current_user.email)
     except RuntimeError as e:
         raise HTTPException(500, detail=str(e))
     
@@ -69,3 +69,34 @@ def list_resumes(
         models.Resume.user_id == current_user.id
     ).order_by(models.Resume.created_at.desc()).all()
     return resumes
+
+
+@router.delete("/{resume_id}")
+def delete_resume(
+    resume_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
+    ).first()
+    if not resume:
+        raise HTTPException(404, "Resume not found")
+
+    # Delete associated tailored documents
+    db.query(models.TailoredDocument).filter(
+        models.TailoredDocument.resume_id == resume_id
+    ).delete()
+
+    # Delete the PDF file from disk
+    if resume.original_filepath and os.path.exists(resume.original_filepath):
+        try:
+            os.remove(resume.original_filepath)
+        except OSError:
+            logger.warning(f"Could not delete file: {resume.original_filepath}")
+
+    db.delete(resume)
+    db.commit()
+    logger.info(f"Resume {resume_id} deleted by user {current_user.email}")
+    return {"detail": "Resume deleted"}

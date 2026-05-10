@@ -3,29 +3,35 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import JobCard from './JobCard';
 
-const stageColors = {
-  Saved: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
-  Applied: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  'Phone Screen': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-  Onsite: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-  Offer: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-  Rejected: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+const stageBadgeColors = {
+  Saved: { light: 'rgba(0,0,0,0.04)', text: '#666666' },
+  Applied: { light: 'rgba(10,114,239,0.08)', text: '#0a72ef' },
+  'Phone Screen': { light: 'rgba(222,29,141,0.08)', text: '#de1d8d' },
+  Onsite: { light: 'rgba(121,40,202,0.08)', text: '#7928ca' },
+  Offer: { light: 'rgba(16,185,129,0.08)', text: '#10b981' },
+  Rejected: { light: 'rgba(255,91,79,0.08)', text: '#ff5b4f' },
 };
 
 export default function BoardColumn({ id, title, jobs, onCardClick, onDelete, onTailor }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const badge = stageBadgeColors[title] || stageBadgeColors.Saved;
 
   return (
     <div
-      className={`w-72 shrink-0 rounded-xl border flex flex-col max-h-full ${
-        isOver
-          ? 'border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
-          : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50'
+      className={`w-72 shrink-0 rounded-lg flex flex-col max-h-full transition-shadow duration-150 ${
+        isOver ? 'shadow-[0_0_0_2px_rgba(10,114,239,0.4)]' : 'shadow-[0_0_0_1px_rgba(0,0,0,0.08)]'
       }`}
+      style={{ background: isOver ? 'rgba(10,114,239,0.04)' : 'var(--accents-1)' }}
     >
-      <div className="rounded-t-xl border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{title}</span>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${stageColors[title] || stageColors.Saved}`}>
+      <div
+        className="rounded-t-lg bg-[var(--geist-background)] px-3 py-2.5 flex items-center justify-between"
+        style={{ boxShadow: '0 1px 0 0 rgba(0,0,0,0.06)' }}
+      >
+        <span className="text-xs font-semibold text-[var(--geist-foreground)] tracking-[-0.01em]">{title}</span>
+        <span
+          className="badge"
+          style={{ backgroundColor: badge.light, color: badge.text, fontSize: '11px', padding: '2px 8px' }}
+        >
           {jobs.length}
         </span>
       </div>
@@ -46,7 +52,7 @@ export default function BoardColumn({ id, title, jobs, onCardClick, onDelete, on
           ))}
         </SortableContext>
         {jobs.length === 0 && (
-          <p className="text-[11px] text-gray-400 dark:text-gray-600 text-center py-6">
+          <p className="text-[11px] text-[var(--accents-3)] text-center py-6">
             No jobs
           </p>
         )}
