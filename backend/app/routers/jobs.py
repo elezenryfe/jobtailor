@@ -3,6 +3,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .. import models, schemas, auth, database
+from ..services import jd_extractor
+from ..services.llm_utils import check_rate_limit
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
@@ -41,6 +43,31 @@ def create_job(
     db.refresh(job)
     logger.info(f"Job created by user {current_user.email}: {job.job_title} at {job.company}")
     return job
+
+
+@router.post("/extract", response_model=schemas.JobExtractResponse)
+def extract_job_fields(
+    req: schemas.JobExtractRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db),
+):
+    """Pull job_title/company/job_url out of a pasted job description.
+
+    Returns fields for the Add Job form to prefill; does not create anything.
+    The job is still saved by POST /api/jobs/ so that validation, duplicate
+    detection and stage defaulting stay in one place.
+    """
+    jd = req.job_description.strip()
+    if not jd:
+        raise HTTPException(400, "Job description is empty")
+
+    if not check_rate_limit(current_user.id):
+        raise HTTPException(429, "Too many requests. Please wait a moment.")
+
+    try:
+        return jd_extractor.extract_job_fields(jd, db=db, user_id=current_user.id)
+    except RuntimeError as e:
+        raise HTTPException(500, detail=str(e))
 
 
 @router.get("/", response_model=List[schemas.JobOut])

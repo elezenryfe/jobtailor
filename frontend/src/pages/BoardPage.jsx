@@ -69,6 +69,11 @@ export default function BoardPage() {
     }
   };
 
+  const handleExtract = async (jobDescription) => {
+    const res = await api.post('/api/jobs/extract', { job_description: jobDescription });
+    return res.data;
+  };
+
   const handleDelete = async (jobId) => {
     if (!window.confirm('Delete this job entry?')) return;
     try {
@@ -212,6 +217,7 @@ export default function BoardPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
+        onExtract={handleExtract}
         job={editingJob}
         resumes={resumes}
       />

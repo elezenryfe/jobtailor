@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 
 const STAGES = ['Saved', 'Applied', 'Phone Screen', 'Onsite', 'Offer', 'Rejected'];
 
-export default function JobModal({ open, onClose, onSave, job, resumes }) {
+const tabBase = 'px-3 py-1.5 text-xs font-medium rounded-md transition-colors';
+
+const getErrorMessage = (err, fallback = 'Something went wrong') => {
+  const detail = err?.response?.data?.detail;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((e) => e.msg).join(', ');
+  return fallback;
+};
+
+export default function JobModal({ open, onClose, onSave, onExtract, job, resumes }) {
   const [form, setForm] = useState({
     job_title: '',
     company: '',
@@ -14,6 +24,11 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('form');
+  const [pasteText, setPasteText] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (job) {
@@ -30,6 +45,11 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
       setForm({ job_title: '', company: '', job_description: '', job_url: '', notes: '', resume_id: '', stage: 'Saved' });
     }
     setErrors({});
+    setActiveTab('form');
+    setPasteText('');
+    setExtracting(false);
+    setExtractError('');
+    setSubmitError('');
   }, [job, open]);
 
   if (!open) return null;
@@ -37,6 +57,7 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (submitError) setSubmitError('');
   };
 
   const validate = () => {
@@ -50,14 +71,43 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
+    setSubmitError('');
     try {
       const payload = { ...form, resume_id: form.resume_id ? parseInt(form.resume_id) : null };
       await onSave(payload, job?.id);
       onClose();
-    } catch {
-      // error handled by parent
+    } catch (err) {
+      // Surfaced here rather than on the page: BoardPage's error banner renders
+      // behind this modal's overlay, so a duplicate-URL 409 would be invisible.
+      setSubmitError(getErrorMessage(err, 'Failed to save job.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleExtract = async () => {
+    if (!pasteText.trim()) return;
+    setExtracting(true);
+    setExtractError('');
+    try {
+      const data = await onExtract(pasteText);
+      setForm((prev) => ({
+        ...prev,
+        job_title: data.job_title || prev.job_title,
+        company: data.company || prev.company,
+        job_url: data.job_url || prev.job_url,
+        job_description: pasteText,
+        stage: 'Saved',
+      }));
+      setErrors({});
+      if (!data.job_title || !data.company) {
+        setExtractError("Couldn't find a job title or company in that text — fill them in below.");
+      }
+      setActiveTab('form');
+    } catch (err) {
+      setExtractError(getErrorMessage(err, 'Extraction failed. Please try again.'));
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -81,7 +131,28 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
           {job ? 'Edit Job' : 'Add Job'}
         </h3>
 
-        <div className="space-y-3">
+        {!job && (
+          <div className="flex gap-1 mb-4">
+            <button
+              onClick={() => setActiveTab('form')}
+              className={`${tabBase} ${activeTab === 'form' ? 'bg-[var(--geist-foreground)] text-[var(--geist-background)]' : 'btn-ghost'}`}
+            >
+              Form
+            </button>
+            <button
+              onClick={() => setActiveTab('paste')}
+              className={`${tabBase} ${activeTab === 'paste' ? 'bg-[var(--geist-foreground)] text-[var(--geist-background)]' : 'btn-ghost'}`}
+            >
+              Paste JD
+            </button>
+          </div>
+        )}
+
+        {extractError && (
+          <p className="text-[11px] text-[var(--geist-error)] mb-3">{extractError}</p>
+        )}
+
+        <div className={activeTab === 'form' ? 'space-y-3' : 'hidden'}>
           <div>
             <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Job Title *</label>
             <input
@@ -166,7 +237,11 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
             />
           </div>
 
-          <div className="flex gap-2 pt-3">
+          {submitError && (
+            <p className="text-[11px] text-[var(--geist-error)] pt-1">{submitError}</p>
+          )}
+
+          <div className={`flex gap-2 pt-3 ${activeTab === 'form' ? '' : 'hidden'}`}>
             <button
               onClick={handleSubmit}
               disabled={saving}
@@ -182,6 +257,28 @@ export default function JobModal({ open, onClose, onSave, job, resumes }) {
             </button>
           </div>
         </div>
+
+        {!job && activeTab === 'paste' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-[var(--accents-5)] mb-1">Paste Job Description</label>
+              <textarea
+                rows={12}
+                value={pasteText}
+                onChange={(e) => { setPasteText(e.target.value); if (extractError) setExtractError(''); }}
+                placeholder="Paste the full job posting here..."
+                className="textarea-geist"
+              />
+            </div>
+            <button
+              onClick={handleExtract}
+              disabled={extracting || !pasteText.trim()}
+              className="btn-primary w-full"
+            >
+              {extracting ? 'Extracting...' : 'Extract'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

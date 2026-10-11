@@ -87,6 +87,14 @@ class JobOut(BaseModel):
     class Config:
         from_attributes = True
 
+class JobExtractRequest(BaseModel):
+    job_description: str = Field(..., min_length=1, max_length=50000)
+
+class JobExtractResponse(BaseModel):
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    job_url: Optional[str] = None
+
 # ----- Job Search Schemas -----
 
 class EmploymentType(str, Enum):
